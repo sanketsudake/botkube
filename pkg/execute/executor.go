@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"unicode"
 
 	"github.com/infracloudio/botkube/pkg/config"
 	log "github.com/infracloudio/botkube/pkg/logging"
@@ -132,6 +133,12 @@ func runKubectlCommand(args []string, clusterName string, isAuthChannel bool) st
 	checkFlag := false
 	for _, arg := range args {
 		if checkFlag {
+			arg = strings.TrimFunc(arg, func(r rune) bool {
+				if r == unicode.SimpleFold('\u0027') || r == unicode.SimpleFold('\u0022') {
+					return true
+				}
+				return false
+			})
 			if arg != clusterName {
 				return ""
 			}
@@ -144,12 +151,8 @@ func runKubectlCommand(args []string, clusterName string, isAuthChannel bool) st
 		if arg == AbbrWatchFlag.String() || strings.HasPrefix(arg, WatchFlag.String()) {
 			continue
 		}
-		if strings.HasPrefix(arg, ClusterFlag.String()) {
-			if arg == ClusterFlag.String() {
-				checkFlag = true
-			} else if strings.SplitAfterN(arg, ClusterFlag.String()+"=", 2)[1] != clusterName {
-				return ""
-			}
+		if arg == ClusterFlag.String() {
+			checkFlag = true
 			isAuthChannel = true
 			continue
 		}
